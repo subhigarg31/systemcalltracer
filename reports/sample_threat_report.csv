@@ -1,0 +1,20 @@
+--- SYSTEM CALL TRACER ANOMALY REPORT ---
+Report ID,REP-20261013-861633
+Generated At,2026-10-13T10:37:41.633Z
+Session Duration,0m 0s
+Total Events Processed,2
+Current Risk Score,75 (Critical)
+Total Alerts,1
+Critical Alerts,1
+High Alerts,0
+Medium Alerts,0
+Low Alerts,0
+
+--- DETECTED THREAT ALERTS ---
+Alert ID,Timestamp,Severity,Category,Process,PID,Status,Description,Evidence Summary,Recommended Action
+"ALT-CRED-SAMPLE","2026-10-13T10:15:31.200Z","Critical","Credential Access","recon_agent",6601,"active","Unauthorized access attempt to sensitive system credential store: /etc/passwd","{""targetedFile"":""/etc/passwd"",""syscall"":""openat""}","Audit process user privileges and isolate process tree."
+
+--- OBSERVED PROCESS SUMMARY ---
+PID,Process Name,Syscall Count,File Ops,Network Ops,Process Ops,Alerts Triggered,Last Seen
+1024,"nginx",1,1,0,0,0,"2026-10-13T10:15:30.100Z"
+6601,"recon_agent",1,1,0,0,1,"2026-10-13T10:15:31.200Z"

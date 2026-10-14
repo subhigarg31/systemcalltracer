@@ -1,0 +1,16 @@
+{
+  "name": "systemcalltracer-server",
+  "version": "1.0.0",
+  "description": "Backend API, Anomaly Detection Engine, and WebSocket Streamer for System Call Tracer",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}

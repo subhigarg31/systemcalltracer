@@ -1,0 +1,23 @@
+{
+  "name": "systemcalltracer",
+  "version": "1.0.0",
+  "description": "System Call Tracer with Real-Time Anomaly Detection",
+  "scripts": {
+    "build:sim": "make -C simulator",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:sim && npm run build:client",
+    "test": "npm --prefix server test",
+    "start": "npm --prefix server start",
+    "dev:server": "npm --prefix server start",
+    "dev:client": "npm --prefix client run dev"
+  },
+  "keywords": [
+    "cybersecurity",
+    "syscall",
+    "anomaly-detection",
+    "real-time",
+    "security-operations"
+  ],
+  "author": "",
+  "license": "MIT"
+}

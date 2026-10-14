@@ -1,0 +1,83 @@
+{
+  "metadata": {
+    "reportTitle": "System Call Tracer - Threat Intelligence & Anomaly Report",
+    "generatedAt": "2026-10-13T10:37:41.633Z",
+    "reportId": "REP-20261013-861633",
+    "sessionStartTime": "2026-10-13T10:37:41.622Z",
+    "sessionDurationSeconds": 0,
+    "sessionDurationFormatted": "0m 0s",
+    "simulationMode": "normal"
+  },
+  "executiveSummary": {
+    "totalEventsProcessed": 2,
+    "totalAlertsRaised": 1,
+    "activeAlertsCount": 1,
+    "acknowledgedAlertsCount": 0,
+    "currentRiskScore": 75,
+    "riskBand": "Critical",
+    "severityCounts": {
+      "Critical": 1,
+      "High": 0,
+      "Medium": 0,
+      "Low": 0
+    },
+    "observedProcessesCount": 2
+  },
+  "categoryDistribution": {
+    "file": 2,
+    "network": 0,
+    "process": 0,
+    "memory": 0
+  },
+  "syscallDistribution": {
+    "openat": 2
+  },
+  "threatAlerts": [
+    {
+      "alertId": "ALT-CRED-SAMPLE",
+      "ruleId": "RULE_A_SENSITIVE_FILE",
+      "category": "Credential Access",
+      "severity": "Critical",
+      "timestamp": "2026-10-13T10:15:31.200Z",
+      "pid": 6601,
+      "processName": "recon_agent",
+      "description": "Unauthorized access attempt to sensitive system credential store: /etc/passwd",
+      "status": "active",
+      "evidence": {
+        "targetedFile": "/etc/passwd",
+        "syscall": "openat"
+      },
+      "recommendedAction": "Audit process user privileges and isolate process tree."
+    }
+  ],
+  "processActivity": [
+    {
+      "pid": 1024,
+      "process_name": "nginx",
+      "syscallCount": 1,
+      "fileCount": 1,
+      "networkCount": 0,
+      "processCount": 0,
+      "alertsTriggered": 0,
+      "firstSeen": "2026-10-13T10:15:30.100Z",
+      "lastSeen": "2026-10-13T10:15:30.100Z"
+    },
+    {
+      "pid": 6601,
+      "process_name": "recon_agent",
+      "syscallCount": 1,
+      "fileCount": 1,
+      "networkCount": 0,
+      "processCount": 0,
+      "alertsTriggered": 1,
+      "firstSeen": "2026-10-13T10:15:31.200Z",
+      "lastSeen": "2026-10-13T10:15:31.200Z"
+    }
+  ],
+  "systemLimitations": [
+    "This report reflects data processed by the C++ synthetic syscall telemetry simulator on macOS.",
+    "Events are structured behavioral simulations and do not represent kernel-level ptrace hooks.",
+    "The risk scoring model is a heuristic prototype (0-100) intended for SOC workflow training and evaluation, not an accredited malware certainty index.",
+    "Host integrity has remained uncompromised as all suspicious behaviors are simulated safely."
+  ]
+}
