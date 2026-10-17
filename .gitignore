@@ -4,5 +4,6 @@ client/node_modules/
 client/dist/
 .env
 .env.*
-!.env.exampleebpf/fake_ransom
+!.env.example
 ebpf/fake_ransom
+__pycache__/
