@@ -61,10 +61,14 @@ sudo ./run_experiment.sh 200 5 5    # 5 ms between files
 
 In-kernel freeze stopped the test program after **3 of 200** files; `kill -CONT` resumed it.
 
-## Results (WSL2, Windows PC, 200 files)
+## Results (WSL2 on Windows, 200 test files)
 
-| Test | No protection | User-space kill | In-kernel freeze |
+| Test | No protection | User-space kill | In-kernel freeze (ours) |
 |---|---|---|---|
-| Fast (0 ms), idle | 200 | 5.2 (worst 10) | 3.0 (always 3) |
-| Slow (5 ms), idle | 200 | 4.0 | 3.0 |
-| Fast (0 ms), CPU load | 200 | pending | pending |
+| Idle PC (5 runs) | 200 | 4.0 (always 4) | **3.0 (always 3)** |
+| Slow, 5 ms per file (5 runs) | 200 | 4.0 | **3.0** |
+| CPU at 100% (10 runs) | 200 | 5.5 (ranged 3–11) | **3.0 (always 3)** |
+
+Under CPU load the user-space detector became unpredictable (worst case 11 files),
+because it has to wait to be scheduled. The in-kernel freeze stopped the process at
+exactly the same point in every run, because it acts inside the system call itself.
