@@ -60,3 +60,11 @@ sudo ./run_experiment.sh 200 5 5    # 5 ms between files
 ## Tested result (bpftrace 0.20.2, Linux 6.18)
 
 In-kernel freeze stopped the test program after **3 of 200** files; `kill -CONT` resumed it.
+
+## Results (WSL2, Windows PC, 200 files)
+
+| Test | No protection | User-space kill | In-kernel freeze |
+|---|---|---|---|
+| Fast (0 ms), idle | 200 | 5.2 (worst 10) | 3.0 (always 3) |
+| Slow (5 ms), idle | 200 | 4.0 | 3.0 |
+| Fast (0 ms), CPU load | 200 | pending | pending |
