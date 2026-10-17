@@ -7,3 +7,4 @@ client/dist/
 !.env.example
 ebpf/fake_ransom
 __pycache__/
+ebpf/backup_tool

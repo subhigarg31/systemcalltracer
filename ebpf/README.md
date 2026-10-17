@@ -13,6 +13,7 @@ All testing happens ONLY in `/tmp/ransom_test`. `fake_ransom` refuses any other 
 | `freeze.bt` | **Our method**: eBPF script that sends SIGSTOP inside the kernel at 4 files / 5 s |
 | `report.bt` + `userspace_killer.py` | **Baseline**: kernel only reports, Python in user space decides and kills |
 | `run_experiment.sh` | Runs no protection / user-space kill / in-kernel freeze and prints a table |
+| `false_alarm_demo.sh` | False alarm: tar restoring a backup trips the rule; freeze + resume restores all files, kill does not |
 
 ## 1. Build
 
@@ -52,8 +53,10 @@ sudo ./run_experiment.sh 200 5 5    # 5 ms between files
 ## Notes
 
 - `--unsafe` is required for `signal()`. Everything needs `sudo`.
-- bpftrace 0.21+ may want `args.filename` instead of `args->filename`. If you get a
-  syntax error, run: `sed -i 's/args->/args./g' freeze.bt report.bt`
+- `freeze.bt` and `report.bt` hook `fentry:security_file_open`, which sees the full
+  resolved path. (An earlier version matched the `openat()` filename text, which missed
+  programs like GNU tar that open files relative to a directory.) This needs a kernel
+  with BTF (`/sys/kernel/btf/vmlinux`) and bpftrace 0.21+ (`args.` syntax).
 - A "couldn't set RLIMIT_MEMLOCK" warning is harmless.
 - Keep the project in the Linux filesystem (`~/...`), not `/mnt/c/...`.
 
