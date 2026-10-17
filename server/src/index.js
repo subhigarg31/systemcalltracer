@@ -6,6 +6,7 @@ const store = require('./store');
 const wsManager = require('./websocket');
 const DetectionEngine = require('./detection/engine');
 const simulatorManager = require('./simulatorManager');
+const kernelGuard = require('./kernelGuard');
 const apiRoutes = require('./routes/api');
 const reportRoutes = require('./routes/reports');
 
@@ -111,6 +112,7 @@ setInterval(() => {
 function cleanup() {
   console.log('\n[Server] Shutting down gracefully...');
   simulatorManager.stop();
+  kernelGuard.stop(); // don't leave bpftrace freezing processes after we exit
   server.close(() => {
     console.log('[Server] HTTP and WebSocket server closed.');
     process.exit(0);
