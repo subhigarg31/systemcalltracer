@@ -1,0 +1,43 @@
+#!/usr/bin/env bpftrace
+/*
+ * freeze.bt — IN-KERNEL ransomware freeze.
+ *
+ * Runs inside the kernel. For every openat() that opens a file in
+ * /tmp/ransom_test for writing, it counts per process. If one process
+ * opens 4 or more files for writing within 5 seconds (our Rule B),
+ * the kernel immediately sends SIGSTOP to that process: no round trip
+ * to user space. A human then decides: kill -CONT <pid> (resume) or
+ * kill -9 <pid> (kill).
+ *
+ * Run:  sudo bpftrace --unsafe freeze.bt
+ * (--unsafe is required because the script sends a signal.)
+ */
+
+BEGIN
+{
+	printf("{\"event\":\"armed\",\"rule\":\"4 writes in 5s\",\"dir\":\"/tmp/ransom_test\"}\n");
+}
+
+tracepoint:syscalls:sys_enter_openat
+/ strncmp(str(args->filename), "/tmp/ransom_test/", 17) == 0
+  && (args->flags & 3) != 0 && @frozen[pid] == 0 /
+{
+	/* start a new 5-second window if needed */
+	if (@start[pid] == 0 || nsecs - @start[pid] > 5000000000) {
+		@start[pid] = nsecs;
+		@count[pid] = 0;
+	}
+	@count[pid]++;
+
+	if (@count[pid] >= 4) {
+		signal("SIGSTOP");          /* freeze, inside the kernel */
+		@frozen[pid] = 1;
+		printf("{\"event\":\"frozen\",\"pid\":%d,\"process\":\"%s\",\"files_in_window\":%d,\"last_file\":\"%s\",\"action\":\"SIGSTOP\"}\n",
+		       pid, comm, @count[pid], str(args->filename));
+	}
+}
+
+END
+{
+	clear(@start); clear(@count); clear(@frozen);
+}

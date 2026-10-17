@@ -1,0 +1,9 @@
+#!/usr/bin/env bpftrace
+/* Baseline: the kernel only REPORTS write-opens; user space decides and kills. */
+BEGIN { printf("ARMED\n"); }
+
+tracepoint:syscalls:sys_enter_openat
+/ strncmp(str(args->filename), "/tmp/ransom_test/", 17) == 0 && (args->flags & 3) != 0 /
+{
+	printf("%d %llu %s\n", pid, nsecs, comm);
+}
