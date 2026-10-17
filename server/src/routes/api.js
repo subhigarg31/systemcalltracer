@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const store = require('../store');
 const simulatorManager = require('../simulatorManager');
+const kernelGuard = require('../kernelGuard');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -231,5 +232,51 @@ router.post('/reset', (req, res) => {
   store.reset();
   res.json({ success: true, message: 'Session data reset successfully.' });
 });
+
+// ---- Kernel freeze guard (eBPF freeze.bt, needs root) ----
+
+router.get('/kernel/status', (req, res) => {
+  res.json({ ...kernelGuard.getStatus(), entries: kernelGuard.getEntries() });
+});
+
+router.post('/kernel/start', (req, res) => {
+  try {
+    res.json(kernelGuard.start());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/kernel/stop', (req, res) => {
+  const result = kernelGuard.stop();
+  res.status(result.success ? 200 : 500).json(result);
+});
+
+router.post('/kernel/demo-attack', async (req, res) => {
+  try {
+    res.json(await kernelGuard.demoAttack());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/kernel/damage', async (req, res) => {
+  try {
+    res.json(await kernelGuard.damage());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function kernelSignalRoute(action) {
+  return (req, res) => {
+    const result = kernelGuard[action](req.params.pid);
+    if (result.notFound) return res.status(404).json(result);
+    res.status(result.success ? 200 : 409).json(result);
+  };
+}
+
+router.post('/kernel/:pid/resume', kernelSignalRoute('resume'));
+router.post('/kernel/:pid/kill', kernelSignalRoute('terminate'));
 
 module.exports = router;

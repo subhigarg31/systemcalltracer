@@ -1,5 +1,11 @@
 const { WebSocketServer, WebSocket } = require('ws');
 
+// Required lazily: kernelGuard requires this module, so a top-level require would be circular.
+function kernelSnapshot() {
+  const kernelGuard = require('./kernelGuard');
+  return { ...kernelGuard.getStatus(), entries: kernelGuard.getEntries() };
+}
+
 class WebSocketManager {
   constructor() {
     this.wss = null;
@@ -31,7 +37,8 @@ class WebSocketManager {
           },
           recentEvents: this.store.events.slice(0, 50),
           alerts: this.store.alerts.slice(0, 50),
-          processes: this.store.getProcessesList().slice(0, 20)
+          processes: this.store.getProcessesList().slice(0, 20),
+          kernel: kernelSnapshot()
         },
         timestamp: new Date().toISOString()
       };
