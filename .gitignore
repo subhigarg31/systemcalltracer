@@ -4,4 +4,4 @@ client/node_modules/
 client/dist/
 .env
 .env.*
-!.env.example
+!.env.exampleebpf/fake_ransom
