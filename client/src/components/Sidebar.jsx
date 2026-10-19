@@ -1,9 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Terminal, ShieldAlert, Cpu, FileText, Settings } from 'lucide-react';
+import { LayoutDashboard, Terminal, ShieldAlert, Shield, Cpu, FileText, Settings } from 'lucide-react';
 import { useSystem } from '../context/SystemContext';
 
 export default function Sidebar({ activeTab, onSelectTab }) {
-  const { metrics } = useSystem();
+  const { metrics, kernelEntries } = useSystem();
+  const frozenCount = kernelEntries.filter(e => e.status === 'frozen').length;
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -14,6 +15,13 @@ export default function Sidebar({ activeTab, onSelectTab }) {
       icon: ShieldAlert,
       badge: metrics.activeAlerts > 0 ? metrics.activeAlerts : null,
       badgeColor: 'bg-red-500 text-white'
+    },
+    {
+      id: 'kernel',
+      label: 'Kernel Protection',
+      icon: Shield,
+      badge: frozenCount > 0 ? frozenCount : null,
+      badgeColor: 'bg-orange-500 text-white'
     },
     { id: 'processes', label: 'Process Activity', icon: Cpu },
     { id: 'reports', label: 'Reports', icon: FileText },

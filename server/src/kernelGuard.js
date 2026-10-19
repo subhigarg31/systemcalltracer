@@ -10,6 +10,8 @@ const FAKE_RANSOM = path.join(EBPF_DIR, 'fake_ransom');
 const TEST_DIR = '/tmp/ransom_test';
 const TEST_FILES = 200;
 
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
 class KernelGuard {
   constructor() {
     this.process = null;
@@ -172,17 +174,64 @@ class KernelGuard {
     });
   }
 
+  // Wait until bpftrace reports it is attached (the BEGIN "armed" line).
+  waitForArmed(timeoutMs = 8000) {
+    return new Promise((resolve) => {
+      const t0 = Date.now();
+      const iv = setInterval(() => {
+        if (this.status === 'armed' || Date.now() - t0 > timeoutMs) {
+          clearInterval(iv);
+          resolve(this.status === 'armed');
+        }
+      }, 150);
+    });
+  }
+
+  // Wait until the attacker is frozen by the guard, or has exited, or we time out.
+  waitForFrozenOrGone(pid, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+      const t0 = Date.now();
+      const iv = setInterval(() => {
+        const e = this.entries.get(pid);
+        let alive = true;
+        try { process.kill(pid, 0); } catch (_) { alive = false; }
+        if ((e && e.status === 'frozen') || !alive || Date.now() - t0 > timeoutMs) {
+          clearInterval(iv);
+          resolve();
+        }
+      }, 150);
+    });
+  }
+
+  // The guard would freeze the file-restore itself (it writes many files fast),
+  // so we DISARM, restore a clean set of files, RE-ARM, then launch the attacker.
+  // This method only resolves once the attacker is frozen (or done), so the
+  // caller can read an accurate damage count right after it returns.
   async demoAttack() {
     this.ensureFakeRansom();
+
+    // 1. Disarm so the restore step is not frozen.
+    this.stop();
+    await delay(400);
+
+    // 2. Restore a clean set of 200 files (runs free, no guard watching).
     const setupOutput = await this.runFakeRansom(['setup', TEST_DIR, String(TEST_FILES)]);
 
+    // 3. Re-arm the guard and wait until it is actually attached.
+    this.start();
+    const armed = await this.waitForArmed(8000);
+
+    // 4. Launch the attacker and wait for the guard to freeze it.
     const child = spawn(FAKE_RANSOM, ['run', TEST_DIR, String(TEST_FILES), '0'], {
       detached: true,
       stdio: 'ignore'
     });
+    const attackerPid = child.pid;
     child.unref();
 
-    return { success: true, pid: child.pid, setup: setupOutput, kernelStatus: this.status };
+    await this.waitForFrozenOrGone(attackerPid, 4000);
+
+    return { success: true, pid: attackerPid, armed, setup: setupOutput, kernelStatus: this.status };
   }
 
   async damage() {
