@@ -28,6 +28,12 @@ export function SystemProvider({ children }) {
   const [isPaused, setIsPaused] = useState(false);
   const [pausedBufferCount, setPausedBufferCount] = useState(0);
   const [maxDisplayRows, setMaxDisplayRows] = useState(250);
+
+  // Kernel freeze guard (eBPF)
+  const [kernelStatus, setKernelStatus] = useState('off');
+  const [kernelEntries, setKernelEntries] = useState([]);
+  const [kernelToast, setKernelToast] = useState(null);
+  const kernelToastTimeoutRef = useRef(null);
   
   // Modals / Drawers
   const [inspectedEvent, setInspectedEvent] = useState(null);
@@ -90,12 +96,29 @@ export function SystemProvider({ children }) {
   const handleWebSocketMessage = (message) => {
     switch (message.type) {
       case 'INITIAL_STATE': {
-        const { session: sess, metrics: met, recentEvents, alerts: alts, processes: procs } = message.data;
+        const { session: sess, metrics: met, recentEvents, alerts: alts, processes: procs, kernel } = message.data;
         if (sess) setSession(prev => ({ ...prev, ...sess }));
         if (met) setMetrics(prev => ({ ...prev, ...met }));
         if (recentEvents) setEvents(recentEvents.slice(0, maxRowsRef.current));
         if (alts) setAlerts(alts);
         if (procs) setProcesses(procs);
+        if (kernel) {
+          setKernelStatus(kernel.status || 'off');
+          setKernelEntries(kernel.entries || []);
+        }
+        break;
+      }
+      case 'KERNEL_FROZEN': {
+        const entry = message.data;
+        setKernelEntries(prev => [entry, ...prev.filter(e => e.pid !== entry.pid)]);
+        setKernelToast(entry);
+        if (kernelToastTimeoutRef.current) clearTimeout(kernelToastTimeoutRef.current);
+        kernelToastTimeoutRef.current = setTimeout(() => setKernelToast(null), 6000);
+        break;
+      }
+      case 'KERNEL_UPDATE': {
+        const entry = message.data;
+        setKernelEntries(prev => prev.map(e => e.pid === entry.pid ? { ...e, ...entry } : e));
         break;
       }
       case 'EVENT': {
@@ -152,6 +175,7 @@ export function SystemProvider({ children }) {
     return () => {
       clearInterval(procInterval);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (kernelToastTimeoutRef.current) clearTimeout(kernelToastTimeoutRef.current);
       if (wsRef.current) wsRef.current.close();
     };
   }, [connectWebSocket]);
@@ -206,6 +230,54 @@ export function SystemProvider({ children }) {
     } catch (err) {
       console.error('Error updating mode:', err);
     }
+  };
+
+  // ---- Kernel freeze guard ----
+  const fetchKernelStatus = async () => {
+    try {
+      const res = await fetch('/api/kernel/status');
+      if (res.ok) {
+        const data = await res.json();
+        setKernelStatus(data.status || 'off');
+        setKernelEntries(data.entries || []);
+      }
+    } catch (_) {}
+  };
+
+  const kernelPost = async (url) => {
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  };
+
+  const armKernel = async () => {
+    const data = await kernelPost('/api/kernel/start');
+    if (data.status) setKernelStatus(data.status);
+    return data;
+  };
+
+  const disarmKernel = async () => {
+    const data = await kernelPost('/api/kernel/stop');
+    setKernelStatus('off');
+    return data;
+  };
+
+  // The server broadcasts KERNEL_UPDATE too; updating here keeps the UI right if the socket lags.
+  const updateKernelEntry = (data) => {
+    if (data.entry) setKernelEntries(prev => prev.map(e => e.pid === data.entry.pid ? { ...e, ...data.entry } : e));
+  };
+
+  const resumeKernelProcess = async (pid) => {
+    const data = await kernelPost(`/api/kernel/${pid}/resume`);
+    updateKernelEntry(data);
+    return data;
+  };
+
+  const killKernelProcess = async (pid) => {
+    const data = await kernelPost(`/api/kernel/${pid}/kill`);
+    updateKernelEntry(data);
+    return data;
   };
 
   const togglePause = () => {
@@ -281,7 +353,16 @@ export function SystemProvider({ children }) {
     togglePause,
     acknowledgeAlert,
     resetSession,
-    fetchProcesses
+    fetchProcesses,
+    kernelStatus,
+    kernelEntries,
+    kernelToast,
+    setKernelToast,
+    fetchKernelStatus,
+    armKernel,
+    disarmKernel,
+    resumeKernelProcess,
+    killKernelProcess
   };
 
   return (
